@@ -48,6 +48,7 @@ COPY --from=builder /etc/group /etc/group
 COPY --from=builder /go/bin/hello /go/bin/hello
 
 COPY resources/text.png /resources/text.png
+COPY resources/pre_ocr.jpg /resources/pre_ocr.jpg 
 
 # Use an unprivileged user.
 USER appuser:appuser
