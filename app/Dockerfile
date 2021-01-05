@@ -47,6 +47,8 @@ COPY --from=builder /etc/group /etc/group
 # Copy our static executable
 COPY --from=builder /go/bin/hello /go/bin/hello
 
+COPY resources/text.png /resources/text.png
+
 # Use an unprivileged user.
 USER appuser:appuser
 
