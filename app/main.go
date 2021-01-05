@@ -1,11 +1,11 @@
 package main
 
 import (
-    "fmt"
+	"fmt"
+	"os"
 	"net/http"
 	
 	vision "cloud.google.com/go/vision/apiv1"
-	visionpb "google.golang.org/genproto/googleapis/cloud/vision/v1"
 )
 
 func main() {
@@ -18,22 +18,30 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
-		return err
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error %v", err)))
+		return
 	}
 
 	f, err := os.Open("/resources/text.png")
 	if err != nil {
-		return err
+			w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error %v", err)))
+		return
 	}
 	defer f.Close()
 
 	image, err := vision.NewImageFromReader(f)
 	if err != nil {
-		return err
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error %v", err)))
+		return
 	}
 	annotations, err := client.DetectTexts(ctx, image, nil, 10)
 	if err != nil {
-		return err
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error %v", err)))
+		return
 	}
 
 	if len(annotations) == 0 {
