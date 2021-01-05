@@ -2,19 +2,19 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"net/http"
-	
+	"os"
+
 	vision "cloud.google.com/go/vision/apiv1"
 )
 
 func main() {
-    http.HandleFunc("/", HelloServer)
-    http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/", HelloServer)
+	http.ListenAndServe(":8080", nil)
 }
 
 func HelloServer(w http.ResponseWriter, r *http.Request) {
-   	ctx := r.Context()
+	ctx := r.Context()
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
@@ -25,7 +25,7 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 
 	f, err := os.Open("/resources/text.png")
 	if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Error %v", err)))
 		return
 	}
@@ -46,10 +46,11 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 
 	if len(annotations) == 0 {
 		fmt.Fprintln(w, "No text found.")
-	} else {
-		fmt.Fprintln(w, "Text:")
-		for _, annotation := range annotations {
-			fmt.Fprintf(w, "%q\n", annotation.Description)
-		}
+		return
 	}
+	ss := ""
+	for _, annotation := range annotations {
+		ss += annotation.String() + "\n"
+	}
+	fmt.Fprint(w, ss)
 }
