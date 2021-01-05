@@ -49,9 +49,7 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "No text found.")
 		return
 	}
-	ss := ""
-	for _, annotation := range annotations {
-		ss += annotation.Description + "\n"
-	}
+	// The first annotation is the raw text
+	ss := annotations[0].Description
 	fmt.Fprint(w, ss)
 }
