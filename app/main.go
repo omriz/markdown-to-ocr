@@ -50,7 +50,7 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 	}
 	ss := ""
 	for _, annotation := range annotations {
-		ss += annotation.String() + "\n"
+		ss += annotation.Description + "\n"
 	}
 	fmt.Fprint(w, ss)
 }
