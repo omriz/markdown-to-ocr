@@ -23,7 +23,8 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := os.Open("/resources/text.png")
+	//f, err := os.Open("/resources/text.png")
+	f, err := os.Open("/resources/pre_ocr.jpg")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Error %v", err)))
