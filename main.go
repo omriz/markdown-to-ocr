@@ -2,14 +2,24 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	vision "cloud.google.com/go/vision/apiv1"
+	"github.com/gogap/config"
+	"github.com/gogap/go-pandoc/pandoc"
+	_ "github.com/gogap/go-pandoc/pandoc/fetcher/data"
 )
 
+var pandocConf *config.Config
+
 func main() {
+	pandocConf = config.NewConfig(
+		config.ConfigFile("pandoc.conf"),
+	)
 	fmt.Println("Starting Server")
 	http.HandleFunc("/", HandleOCR)
 	http.ListenAndServe(":8080", nil)
@@ -38,6 +48,22 @@ func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
 	return annotations[0].Description, nil
 }
 
+func parseMarkdown(ctx context.Context, md string) ([]byte, error) {
+	pdoc, err := pandoc.New(pandocConf)
+	if err != nil {
+		return nil, err
+	}
+	fetcherOpts := pandoc.FetcherOptions{
+		Name:   "data",
+		Params: json.RawMessage(`{"data": "` + string(base64.StdEncoding.EncodeToString([]byte(md))+`"}`)),
+	}
+	convertOpts := pandoc.ConvertOptions{
+		From: "markdown",
+		To:   "pdf",
+	}
+	return pdoc.Convert(fetcherOpts, convertOpts)
+}
+
 // HandleOCR handles image requests
 func HandleOCR(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -53,5 +79,11 @@ func HandleOCR(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Error %v", err)))
 		return
 	}
-	fmt.Fprint(w, ss)
+	d, err := parseMarkdown(ctx, ss)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error %v", err)))
+		return
+	}
+	w.Write(d)
 }
