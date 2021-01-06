@@ -3,18 +3,23 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	vision "cloud.google.com/go/vision/apiv1"
 )
 
 func main() {
 	fmt.Println("Starting Server")
-	http.HandleFunc("/", HelloServer)
+	http.HandleFunc("/", HandleOCR)
 	http.ListenAndServe(":8080", nil)
 }
 
-func HelloServer(w http.ResponseWriter, r *http.Request) {
+// HandleOCR handles image requests
+func HandleOCR(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Server only support POST requests")
+		return
+	}
 	ctx := r.Context()
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
@@ -24,16 +29,9 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//f, err := os.Open("/resources/text.png")
-	f, err := os.Open("resources/pre_ocr.jpg")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error %v", err)))
-		return
-	}
-	defer f.Close()
-
-	image, err := vision.NewImageFromReader(f)
+	// We are reading the image from the body
+	defer r.Body.Close()
+	image, err := vision.NewImageFromReader(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Error %v", err)))
