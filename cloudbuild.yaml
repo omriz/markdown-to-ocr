@@ -2,7 +2,16 @@ steps:
 - name: 'bash'
   entrypoint: 'bash'
   args: ['-c', 'echo let us assume there are tests here']
+# Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/markdown-to-docs/markdown-to-docs:$COMMIT_SHA', '.']
+# Push the container image to Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/markdown-to-docs/markdown-to-docs:$COMMIT_SHA']
+# Deploy container image to Cloud Run
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'bash'
-  args: ['-c', 'gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy app/app.yaml']
+  entrypoint: gcloud
+  args: ['run', 'deploy', 'markdown-to-docs', '--image', 'gcr.io/markdown-to-docs/markdown-to-docs:$COMMIT_SHA', '--region', 'europe-west1', '--platform', 'managed']
+images:
+- gcr.io/markdown-to-docs/markdown-to-docs:$COMMIT_SHA
 timeout: '1600s'
