@@ -36,7 +36,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 ############################
 # STEP 2 build a small image
 ############################
-FROM idocking/pandoc:alpine-2.1.1
+FROM pandoc/latex:2.11.3.2
 
 # Create appuser
 ENV USER=appuser
@@ -56,6 +56,8 @@ RUN adduser \
 
 # Copy our static executable
 COPY --from=builder /go/bin/hello /go/bin/hello
+COPY pandoc.conf /pandoc.conf
+RUN chmod a+r /pandoc.conf
 
 # Use an unprivileged user.
 USER appuser:appuser

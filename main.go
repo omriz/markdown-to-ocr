@@ -18,7 +18,7 @@ var pandocConf *config.Config
 
 func main() {
 	pandocConf = config.NewConfig(
-		config.ConfigFile("pandoc.conf"),
+		config.ConfigFile("/pandoc.conf"),
 	)
 	fmt.Println("Starting Server")
 	http.HandleFunc("/", HandleOCR)
