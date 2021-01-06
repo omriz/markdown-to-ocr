@@ -36,19 +36,26 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 ############################
 # STEP 2 build a small image
 ############################
-FROM scratch
+FROM idocking/pandoc:alpine-2.1.1
 
-# Import from builder.
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
+# Create appuser
+ENV USER=appuser
+ENV UID=10001
+
+# See https://stackoverflow.com/a/55757473/12429735
+RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    "${USER}"
+
 
 # Copy our static executable
 COPY --from=builder /go/bin/hello /go/bin/hello
-
-COPY resources/text.png /resources/text.png
-COPY resources/pre_ocr.jpg /resources/pre_ocr.jpg 
 
 # Use an unprivileged user.
 USER appuser:appuser
