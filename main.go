@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 
 	vision "cloud.google.com/go/vision/apiv1"
@@ -13,6 +15,29 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
+	client, err := vision.NewImageAnnotatorClient(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// We are reading the image from the body
+	defer b.Close()
+	image, err := vision.NewImageFromReader(b)
+	if err != nil {
+		return "", err
+	}
+	annotations, err := client.DetectTexts(ctx, image, nil, 10)
+	if err != nil {
+		return "", err
+	}
+
+	if len(annotations) == 0 {
+		return "", fmt.Errorf("No text found")
+	}
+	return annotations[0].Description, nil
+}
+
 // HandleOCR handles image requests
 func HandleOCR(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -21,34 +46,12 @@ func HandleOCR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-
-	client, err := vision.NewImageAnnotatorClient(ctx)
+	// Getting the body of the request
+	ss, err := parseBody(ctx, r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Error %v", err)))
 		return
 	}
-
-	// We are reading the image from the body
-	defer r.Body.Close()
-	image, err := vision.NewImageFromReader(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error %v", err)))
-		return
-	}
-	annotations, err := client.DetectTexts(ctx, image, nil, 10)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error %v", err)))
-		return
-	}
-
-	if len(annotations) == 0 {
-		fmt.Fprintln(w, "No text found.")
-		return
-	}
-	// The first annotation is the raw text
-	ss := annotations[0].Description
 	fmt.Fprint(w, ss)
 }
