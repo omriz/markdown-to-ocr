@@ -6,19 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 
-	vision "cloud.google.com/go/vision/apiv1"
 	"github.com/gogap/config"
 	"github.com/gogap/go-pandoc/pandoc"
 	_ "github.com/gogap/go-pandoc/pandoc/fetcher/data"
+	"github.com/otiai10/gosseract/v2"
 )
 
 var pandocConf *config.Config
 
 func main() {
 	pandocConf = config.NewConfig(
-		config.ConfigFile("/pandoc.conf"),
+		config.ConfigFile("./pandoc.conf"),
 	)
 	fmt.Println("Starting Server")
 	http.HandleFunc("/", HandleOCR)
@@ -26,26 +27,14 @@ func main() {
 }
 
 func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
-	client, err := vision.NewImageAnnotatorClient(ctx)
-	if err != nil {
-		return "", err
-	}
-
+	client := gosseract.NewClient()
 	// We are reading the image from the body
-	defer b.Close()
-	image, err := vision.NewImageFromReader(b)
+	body, err := ioutil.ReadAll(b)
 	if err != nil {
 		return "", err
 	}
-	annotations, err := client.DetectTexts(ctx, image, nil, 10)
-	if err != nil {
-		return "", err
-	}
-
-	if len(annotations) == 0 {
-		return "", fmt.Errorf("No text found")
-	}
-	return annotations[0].Description, nil
+	client.SetImageFromBytes(body)
+	return client.Text()
 }
 
 func parseMarkdown(ctx context.Context, md string) ([]byte, error) {
