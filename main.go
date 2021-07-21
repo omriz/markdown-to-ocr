@@ -1,13 +1,15 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"flag"
 	"io"
 	"io/ioutil"
-	"net/http"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gogap/config"
 	"github.com/gogap/go-pandoc/pandoc"
@@ -18,15 +20,22 @@ import (
 var pandocConf *config.Config
 
 func main() {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
 	pandocConf = config.NewConfig(
-		config.ConfigFile("./pandoc.conf"),
+		config.ConfigFile(filepath.Join(dir, "pandoc.conf")),
 	)
-	fmt.Println("Starting Server")
-	http.HandleFunc("/", HandleOCR)
-	http.ListenAndServe(":8080", nil)
+	srcDir := flag.String("source", "", "Source Directory to scan")
+	destDir := flag.String("dest", "", "Destination Directory to scan")
+	flag.Parse()
+	if err := convertFiles(*srcDir, *destDir); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
+func parseBody(b io.ReadCloser) (string, error) {
 	client := gosseract.NewClient()
 	// We are reading the image from the body
 	body, err := ioutil.ReadAll(b)
@@ -37,7 +46,7 @@ func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
 	return client.Text()
 }
 
-func parseMarkdown(ctx context.Context, md string) ([]byte, error) {
+func parseMarkdown(md string) ([]byte, error) {
 	pdoc, err := pandoc.New(pandocConf)
 	if err != nil {
 		return nil, err
@@ -48,31 +57,52 @@ func parseMarkdown(ctx context.Context, md string) ([]byte, error) {
 	}
 	convertOpts := pandoc.ConvertOptions{
 		From: "markdown",
-		To:   "pdf",
+		To:   "docx",
 	}
 	return pdoc.Convert(fetcherOpts, convertOpts)
 }
 
-// HandleOCR handles image requests
-func HandleOCR(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Server only support POST requests")
-		return
-	}
-	ctx := r.Context()
-	// Getting the body of the request
-	ss, err := parseBody(ctx, r.Body)
+func convertFile(s, t string) error {
+	ss, err := os.Open(s)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error %v", err)))
-		return
+		return err
 	}
-	d, err := parseMarkdown(ctx, ss)
+	text, err := parseBody(ss)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error %v", err)))
-		return
+		return err
 	}
-	w.Write(d)
+	tt, err := parseMarkdown(text)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(t, tt, 0644)
+}
+
+func convertFiles(src, dest string) error {
+	if _, err := os.Stat(dest); os.IsNotExist(err) {
+		err := os.Mkdir(dest, 0700)
+		if err != nil {
+			return err
+		}
+	}
+	srcReadDir, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	srcFiles, err := srcReadDir.Readdir(0)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range srcFiles {
+		s := filepath.Join(src, f.Name())
+		splitted := strings.Split(f.Name(), ".")
+		t := filepath.Join(dest, strings.Join(splitted[:len(splitted)-1], ".")+".docx")
+		log.Printf("Converting %s -> %s", s, t)
+		err := convertFile(s, t)
+		if err != nil {
+			log.Printf("Failed to convert: %v", err)
+		}
+	}
+	return nil
 }

@@ -9,7 +9,7 @@ require (
 	github.com/gogap/go-pandoc v0.0.0-20200716062510-7550ed141704
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/otiai10/gosseract v2.2.1+incompatible // indirect
-	github.com/otiai10/gosseract/v2 v2.3.1 // indirect
+	github.com/otiai10/gosseract/v2 v2.3.1
 	github.com/otiai10/mint v1.3.2 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/phyber/negroni-gzip v1.0.0 // indirect
