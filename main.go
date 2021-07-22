@@ -102,6 +102,8 @@ func convertFiles(src, dest string) error {
 		err := convertFile(s, t)
 		if err != nil {
 			log.Printf("Failed to convert: %v", err)
+		} else {
+			_ = os.Remove(s)
 		}
 	}
 	return nil
