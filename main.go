@@ -43,12 +43,12 @@ func parseBody(ctx context.Context, b io.ReadCloser) (string, error) {
 	}
 
 	if len(annotations) == 0 {
-		return "", fmt.Errorf("No text found")
+		return "", fmt.Errorf("no text found")
 	}
 	return annotations[0].Description, nil
 }
 
-func parseMarkdown(ctx context.Context, md string) ([]byte, error) {
+func parseMarkdown(_ context.Context, md string) ([]byte, error) {
 	pdoc, err := pandoc.New(pandocConf)
 	if err != nil {
 		return nil, err
